@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Winter Trails</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.10/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.10/"></script>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+    
+    #optionsDiv {
+	  position: absolute;
+      top: 0px;
+      right: 0px;
+      max-width: 450px;
+      background-color: dimgray;
+      color: white;
+	  text-align: center;
+      z-index: 30;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+
+  <script>
+    require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/widgets/BasemapGallery",
+        "esri/layers/GraphicsLayer",
+		    "esri/symbols/SimpleLineSymbol",
+		    "esri/tasks/QueryTask",
+		    "esri/tasks/support/Query",
+		    "dojo/dom",
+		    "dojo/on",
+		    "dojo/_base/array",		
+        "dojo/domReady!"
+      ],
+      function(
+        Map, MapView,
+        FeatureLayer, BasemapGallery, GraphicsLayer, SimpleLineSymbol, QueryTask, Query, dom, on, arrayUtils
+      ) {
+
+        var map = new Map({
+          basemap: "hybrid"
+        });
+
+        var view = new MapView({
+          container: "viewDiv",
+          zoom: 10,
+          center: [-110.68, 43.79],
+          map: map
+
+        });
+
+       var featureLayer = new FeatureLayer({
+          url: "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/GRTE_TRANS_Winter_Trails_1/FeatureServer/0/query?outFields=*&where=1%3D1"
+        });
+
+       
+        var basemapGallery = new BasemapGallery({
+           view: view
+     
+      });
+      
+       view.ui.add(basemapGallery, {
+        position: "top-left"
+      });
+      
+       map.add(featureLayer);
+       
+       var resultsLyr = new GraphicsLayer();
+       map.add(resultsLyr);
+      
+      });
+     
+     function doQuery(){
+			//var featureLayerUrl = map.layers.items[1].url + "/" + map.layers.items[1].layerId;
+
+			var qTask = new QueryTask({
+		        url: "https://services1.arcgis.com/fBc8EJBxQRMcHlei/arcgis/rest/services/GRTE_TRANS_Winter_Trails_1/FeatureServer/0/query?outFields=*&where=1%3D1"
+		         
+		    });
+			var params = new Query({
+	        	returnGeometry: true,
+	        	outFields: ["*"]
+	      	});
+
+        	var expressionSign = dom.byId("signSelect");
+      		var val = dom.byId("valInput").value;
+        	params.where = "SEG_MI" + expressionSign.value + val;
+
+	        qTask.execute(params)
+	          .then(getResults)
+	          .otherwise(promiseRejected);
+		} 
+		
+		 function getResults(response) {
+	        // print the number of results returned to the user
+	        dom.byId("printResults").innerHTML = response.features.length + " result(s) found!";
+			displayResultsIn2D(response);
+		}
+		
+	    function promiseRejected(err) {
+	        console.error("Query failed: ", err.message);
+	    }
+		
+			
+		function displayResultsIn2D(response) {
+	      	resultsLyr.removeAll();
+
+	        var featureResults2D = arrayUtils.map(response.features, function(feature) {
+	          feature.symbol = new SimpleLineSymbol({
+				  style: "solid",
+				  color: "green",
+				  width: "8pt",
+				   
+				});
+	          return feature;
+	        });
+		
+		//	resultsLyr.addMany(featureResults2D);
+	        // animate to the results after they are added to the map  
+	   //     view_2d.goTo(featureResults2D);		  
+		  }
+		
+			
+			
+	
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv"></div>
+  <div id="optionsDiv">
+		Trail length
+		<select id="signSelect">
+		  <option value=">">is greater than</option>
+		  <option value="<">is less than</option>
+		  </select>
+		<input id="valInput" value="5" />
+		<button id="doBtn">Execute</button>
+		<br>
+		<p><span id="printResults"></span></p>
+	</div>
+</body>
+
+</html>
